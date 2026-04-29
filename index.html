@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>DNK OMEGA</title>
+    <!-- Подключаем библиотеку PeerJS для видеосвязи -->
+    <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
+    <style>
+        * {
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+        }
+        body {
+            margin: 0;
+            background: #0b0f19;
+            color: white;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            overflow: hidden;
+        }
+        
+        /* Стили карточек интерфейса (эффект стекла) */
+        .card {
+            background: rgba(20, 30, 48, 0.85);
+            padding: 30px;
+            border-radius: 15px;
+            border: 1px solid #1abc9c;
+            text-align: center;
+            width: 320px;
+            box-shadow: 0 0 25px rgba(26, 188, 156, 0.15);
+            backdrop-filter: blur(10px);
+        }
+
+        .auth-title {
+            color: #1abc9c;
+            letter-spacing: 2px;
+            font-size: 18px;
+            margin-bottom: 20px;
+            text-transform: uppercase;
+        }
+
+        input {
+            width: 100%;
+            padding: 15px;
+            margin: 10px 0 20px 0;
+            background: rgba(0, 0, 0, 0.5);
+            border: 1px solid #1abc9c;
+            color: white;
+            text-align: center;
+            font-size: 18px;
+            border-radius: 8px;
+            outline: none;
+            letter-spacing: 2px;
+        }
+
+        input:focus {
+            box-shadow: 0 0 10px rgba(26, 188, 156, 0.5);
+        }
+
+        button {
+            width: 100%;
+            padding: 15px;
+            background: #1abc9c;
+            color: #0b0f19;
+            border: none;
+            font-size: 16px;
+            font-weight: bold;
+            border-radius: 8px;
+            cursor: pointer;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            transition: 0.1s;
+        }
+
+        button:active {
+            transform: scale(0.96);
+        }
+
+        .btn-red {
+            background: #e74c3c;
+            color: white;
+            border: 1px solid #c0392b;
+            width: 150px;
+            border-radius: 30px;
+            box-shadow: 0 0 15px rgba(231, 76, 60, 0.4);
+        }
+
+        .badge-block {
+            background: rgba(231, 76, 60, 0.1);
+            color: #e74c3c;
+            padding: 4px 10px;
+            border-radius: 5px;
+            font-size: 10px;
+            border: 1px solid #e74c3c;
+            vertical-align: top;
+            margin-left: 10px;
+        }
+
+        /* Управление экранами */
+        #auth-screen, #room-screen, #video-screen {
+            display: none;
+            width: 100%;
+            height: 100%;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+        }
+
+        /* Активный экран */
+        .active-screen {
+            display: flex !important;
+        }
+
+        /* Зона видеосвязи */
+        #video-screen {
+            position: relative;
+            background: black;
+        }
+        
+        #remote-video {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        
+        #local-video {
+            position: absolute;
+            bottom: 90px;
+            right: 20px;
+            width: 100px;
+            height: 140px;
+            object-fit: cover;
+            border-radius: 12px;
+            border: 2px solid #1abc9c;
+            transform: scaleX(-1);
+            box-shadow: 0 0 15px rgba(0,0,0,0.5);
+        }
+        
+        .controls {
+            position: absolute;
+            bottom: 30px;
+            width: 100%;
+            display: flex;
+            justify-content: center;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- ЭКРАН 1: БЛОКИРОВКА (Код 1212) -->
+    <div id="auth-screen" class="active-screen">
+        <div class="card">
+            <div class="auth-title">ДОСТУП ОГРАНИЧЕН</div>
+            <input type="password" id="code-input" placeholder="КОД ДОСТУПА">
+            <button id="hack-btn">ВЗЛОМАТЬ</button>
+            <p id="auth-error" style="color: #e74c3c; font-size: 12px; display: none; margin-top: 15px;">ОШИБКА ДОСТУПА</p>
+        </div>
+    </div>
+
+    <!-- ЭКРАН 2: ВВОД СЕКРЕТНОГО СЛОВА -->
+    <div id="room-screen">
+        <div class="card">
+            <h2 style="letter-spacing: 3px; margin: 0 0 5px 0; display: inline-block;">DNK OMEGA</h2>
+            <span class="badge-block">BLOCK</span>
+            <p style="font-size: 11px; color: #7f8c8d; margin-top: 25px; letter-spacing: 1px;">СЕКРЕТНОЕ СЛОВО (НАПРИМЕР: КИЕВ)</p>
+            <input type="text" id="room-input" placeholder="ВВЕДИ ПАРОЛЬ КОМНАТЫ">
+            <button id="connect-btn">ПОДКЛЮЧИТЬ</button>
+            <p id="status-text" style="color: #1abc9c; font-size: 12px; margin-top: 15px; font-weight: bold;"></p>
+        </div>
+    </div>
+
+    <!-- ЭКРАН 3: ВИДЕОСВЯЗЬ -->
+    <div id="video-screen">
+        <!-- Видео собеседника (на весь экран) -->
+        <video id="remote-video" autoplay playsinline></video>
+        <!-- Твое видео (в углу) -->
+        <video id="local-video" autoplay playsinline muted></video>
+        
+        <div class="controls">
+            <button id="hangup-btn" class="btn-red">ОТБОЙ</button>
+        </div>
+    </div>
+
+    <script>
+        // Элементы интерфейса
+        const authScreen = document.getElementById('auth-screen');
+        const roomScreen = document.getElementById('room-screen');
+        const videoScreen = document.getElementById('video-screen');
+        
+        const codeInput = document.getElementById('code-input');
+        const hackBtn = document.getElementById('hack-btn');
+        const authError = document.getElementById('auth-error');
+        
+        const roomInput = document.getElementById('room-input');
+        const connectBtn = document.getElementById('connect-btn');
+        const statusText = document.getElementById('status-text');
+        const hangupBtn = document.getElementById('hangup-btn');
+        
+        const localVideo = document.getElementById('local-video');
+        const remoteVideo = document.getElementById('remote-video');
+
+        let peer = null;
+        let localStream = null;
+        let currentCall = null;
+
+        // ШАГ 1: ЛОГИКА "ВЗЛОМА"
+        hackBtn.onclick = () => {
+            // Тот самый пароль из твоего видео
+            if (codeInput.value === '1212') {
+                authScreen.classList.remove('active-screen');
+                roomScreen.classList.add('active-screen');
+            } else {
+                authError.style.display = 'block';
+                setTimeout(() => authError.style.display = 'none', 2000);
+            }
+        };
+
+        // ШАГ 2: ПОДКЛЮЧЕНИЕ К КОМНАТЕ
+        connectBtn.onclick = async () => {
+            const secretWord = roomInput.value.trim().toUpperCase();
+            if (!secretWord) return;
+
+            statusText.innerText = 'ИНИЦИАЛИЗАЦИЯ КАМЕРЫ...';
+
+            try {
+                // Запрашиваем доступ к камере и микрофону
+                localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+                localVideo.srcObject = localStream;
+
+                statusText.innerText = 'СВЯЗЬ С СЕРВЕРОМ...';
+                
+                // Для теста используем бесплатный сервер PeerJS. 
+                // Создаем ID на базе секретного слова, чтобы вы могли созвониться
+                const myPeerId = "DNK-OMEGA-" + secretWord + "-" + Math.floor(Math.random() * 100);
+                
+                peer = new Peer(myPeerId);
+
+                peer.on('open', (id) => {
+                    statusText.innerText = 'ГОТОВО. ОЖИДАНИЕ НАПАРНИКА...';
+                    
+                    // Переключаем интерфейс на видео
+                    setTimeout(() => {
+                        roomScreen.classList.remove('active-screen');
+                        videoScreen.classList.add('active-screen');
+                    }, 1000);
+                });
+
+                // Обработка входящего звонка
+                peer.on('call', (call) => {
+                    call.answer(localStream);
+                    currentCall = call;
+                    
+                    call.on('stream', (remoteStream) => {
+                        remoteVideo.srcObject = remoteStream;
+                    });
+                });
+
+                peer.on('error', (err) => {
+                    statusText.innerText = 'ОШИБКА СЕТИ';
+                    statusText.style.color = '#e74c3c';
+                });
+
+            } catch (err) {
+                statusText.innerText = 'НЕТ ДОСТУПА К КАМЕРЕ';
+                statusText.style.color = '#e74c3c';
+            }
+        };
+
+        // ШАГ 3: ЗАВЕРШЕНИЕ ЗВОНКА
+        hangupBtn.onclick = () => {
+            if (currentCall) currentCall.close();
+            if (peer) peer.destroy();
+            
+            // Выключаем камеру, чтобы лампочка на ноуте погасла
+            if (localStream) {
+                localStream.getTracks().forEach(track => track.stop());
+            }
+            
+            // Возвращаемся на экран ввода слова
+            videoScreen.classList.remove('active-screen');
+            roomScreen.classList.add('active-screen');
+            
+            statusText.innerText = 'КАНАЛ ЗАКРЫТ';
+            statusText.style.color = '#7f8c8d';
+            roomInput.value = '';
+        };
+    </script>
+</body>
+</html>
