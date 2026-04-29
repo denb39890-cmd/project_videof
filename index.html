@@ -75,7 +75,25 @@
         let localStream = null;
         let currentCall = null;
 
-        // Взлом
+        // Бронебойные сервера для пробива VPN
+        const peerConfig = {
+            config: {
+                'iceServers': [
+                    { urls: 'stun:stun.l.google.com:19302' },
+                    {
+                        urls: "turn:openrelay.metered.ca:80",
+                        username: "openrelayproject",
+                        credential: "openrelayproject"
+                    },
+                    {
+                        urls: "turn:openrelay.metered.ca:443",
+                        username: "openrelayproject",
+                        credential: "openrelayproject"
+                    }
+                ]
+            }
+        };
+
         hackBtn.onclick = () => {
             if (codeInput.value === '1212') {
                 authScreen.classList.remove('active-screen');
@@ -86,7 +104,6 @@
             }
         };
 
-        // Подключение
         connectBtn.onclick = async () => {
             const secretWord = roomInput.value.trim().toUpperCase();
             if (!secretWord) return;
@@ -100,24 +117,22 @@
                 
                 const roomId = "DNK-ROOM-" + secretWord;
 
-                // Попытка 1: Создаем комнату (становимся Хостом)
-                peer = new Peer(roomId);
+                // Создаем Хоста с новыми серверами
+                peer = new Peer(roomId, peerConfig);
 
                 peer.on('open', (id) => {
                     statusText.innerText = 'КОМНАТА СОЗДАНА. ОЖИДАНИЕ НАПАРНИКА...';
                     showVideoScreen();
                 });
 
-                // Если ошибка 'unavailable-id' — значит Хост уже там, мы будем Клиентом
                 peer.on('error', (err) => {
                     if (err.type === 'unavailable-id') {
                         statusText.innerText = 'НАПАРНИК НАЙДЕН. ПОДКЛЮЧАЕМСЯ...';
                         
-                        // Создаем новый Peer с рандомным ID
-                        peer = new Peer();
+                        // Создаем Клиента с новыми серверами
+                        peer = new Peer(peerConfig);
                         peer.on('open', () => {
                             showVideoScreen();
-                            // Звоним Хосту!
                             currentCall = peer.call(roomId, localStream);
                             
                             currentCall.on('stream', (remoteStream) => {
@@ -132,7 +147,6 @@
                     }
                 });
 
-                // Обработка входящего звонка (если мы Хост)
                 peer.on('call', (call) => {
                     call.answer(localStream);
                     currentCall = call;
